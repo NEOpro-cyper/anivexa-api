@@ -69,6 +69,32 @@ GET /stream/reanime/:id/sub|dub/:ep
 ```
 302 redirect directly to the HLS stream.
 
+### Worker proxy mode
+
+Append `?worker=1` (or `?worker=true`) to any `/watch` or `/stream` route to route the returned **stream URLs and subtitle URLs** through a CORS proxy worker:
+
+```
+GET /watch/anizone/16498/sub/anizone-1?worker=1
+GET /watch/reanime/16498/sub/reanime-1?worker=true
+GET /stream/reanime/16498/sub/1?worker=1
+```
+
+Instead of raw URLs, every stream and subtitle URL is prefixed with the worker base:
+
+```json
+{
+  "url": "https://bold-hill-8d64.ntb7nmytsd.workers.dev/https://fetch.nexabloom.top/anime/9aae782ce0bb85d118b47f327f502240/61435075c1b6009da5cd5ebf73f6a235/master.m3u8?token=..."
+}
+```
+
+Notes:
+
+- Works on all providers. `streams[].url`, `streams[].subtitles[].url`, top-level `subtitles[].url` (anikoto / senshi / reanime), `stream_url` (reanime) and `sources[].extractedUrl` (mkissa) are all rewritten.
+- `/stream/reanime/...` 302 redirects point at the worker-proxied URL.
+- Omit the param (or use any other value) to get raw URLs as before. Both variants share the same cache.
+- Pass a custom worker with `?worker=https://your-worker.your-subdomain.workers.dev` to override the default per request.
+- Set the `WORKER_PROXY_URL` environment variable to change the default worker used by `?worker=1|true`.
+
 <a id="reanime-flixcloud-playback"></a>
 ## ReAnime / FlixCloud playback notes
 

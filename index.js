@@ -38,6 +38,75 @@ function rewriteRequest(request, newPath) {
 const watchInflight = new Map();
 const SIGNED_STREAM_WATCH_TTL = 60_000;
 
+// ── Worker proxy (?worker=1|true|<custom-url>) ───────────────────────────────
+// When enabled, stream + subtitle URLs in the response are prefixed with the
+// worker base, e.g. https://worker.example.dev/https://host/path/master.m3u8
+const DEFAULT_WORKER_BASE = (process.env.WORKER_PROXY_URL || "https://bold-hill-8d64.ntb7nmytsd.workers.dev").replace(/\/+$/, "");
+
+function workerBase(request) {
+  const raw = new URL(request.url).searchParams.get("worker");
+  if (!raw) return null;
+  const value = raw.trim();
+  if (/^(1|true)$/i.test(value)) return DEFAULT_WORKER_BASE;
+  if (/^https?:\/\/.+/i.test(value)) return value.replace(/\/+$/, "");
+  return null;
+}
+
+function proxiedUrl(url, base) {
+  if (typeof url !== "string" || !url || !base) return url;
+  if (/^https?:\/\//i.test(url) || url.startsWith("//")) return `${base}/${url.replace(/^\/+/, "")}`;
+  return url;
+}
+
+function proxySubtitle(sub, base) {
+  if (!sub || typeof sub !== "object") return sub;
+  return { ...sub, url: proxiedUrl(sub.url, base) };
+}
+
+function proxyStream(stream, base) {
+  if (!stream || typeof stream !== "object") return stream;
+  const next = { ...stream, url: proxiedUrl(stream.url, base) };
+  if (Array.isArray(next.subtitles)) next.subtitles = next.subtitles.map((s) => proxySubtitle(s, base));
+  return next;
+}
+
+function applyWorkerProxy(data, base) {
+  if (!data || typeof data !== "object") return data;
+  const out = { ...data };
+  if (Array.isArray(out.streams)) out.streams = out.streams.map((s) => proxyStream(s, base));
+  // mkissa returns sources[] where extractedUrl is the playable stream
+  if (Array.isArray(out.sources)) out.sources = out.sources.map((s) =>
+    s && typeof s === "object" ? { ...s, extractedUrl: proxiedUrl(s.extractedUrl, base) } : s
+  );
+  if (Array.isArray(out.subtitles)) out.subtitles = out.subtitles.map((s) => proxySubtitle(s, base));
+  if (typeof out.stream_url === "string") out.stream_url = proxiedUrl(out.stream_url, base);
+  return out;
+}
+
+async function withWorker(request, response) {
+  const base = workerBase(request);
+  if (!base) return response;
+
+  // 302-style redirect routes (e.g. /stream/reanime/...) → rewrite Location
+  if (response.status >= 300 && response.status < 400) {
+    const location = response.headers.get("location");
+    if (!location) return response;
+    const headers = new Headers(response.headers);
+    headers.set("Location", proxiedUrl(location, base));
+    return new Response(null, { status: response.status, headers });
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) return response;
+
+  try {
+    const data = await response.json();
+    return json(applyWorkerProxy(data, base), response.status);
+  } catch {
+    return response;
+  }
+}
+
 async function cachedWatch(cacheKey, handlerFn, ttl = WATCH_TTL) {
   const entry = await getAsync(cacheKey);
   if (entry && isFresh(entry)) return json(entry.data);
@@ -65,10 +134,9 @@ async function cachedWatch(cacheKey, handlerFn, ttl = WATCH_TTL) {
   finally { watchInflight.delete(cacheKey); }
 }
 
-export default {
-  async fetch(request, env) {
-    const url  = new URL(request.url);
-    const path = url.pathname;
+async function routeRequest(request, env) {
+  const url  = new URL(request.url);
+  const path = url.pathname;
 
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -308,6 +376,13 @@ export default {
         "/watch/animedunya/:id/sub|dub/animedunya-:ep",
         "/watch/animeonsen/:id/sub|dub/animeonsen-:ep",
       ],
+      worker: "Append ?worker=1|true (or ?worker=<custom-worker-url>) to any /watch or /stream route to route stream + subtitle URLs through the proxy worker",
     });
+}
+
+export default {
+  async fetch(request, env) {
+    const response = await routeRequest(request, env);
+    return withWorker(request, response);
   },
 };
