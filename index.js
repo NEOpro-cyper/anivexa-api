@@ -51,7 +51,7 @@ const DEFAULT_WORKER_BASE = (process.env.WORKER_PROXY_URL || "https://bold-hill-
 //   key   = SHA-256(SECRET)              -> AES-256-GCM
 //   iv    = SHA-256("iv:" + url)[0..12]  -> deterministic (same URL = same token)
 const WORKER_URL_EN = (
-  process.env.WORKER_URL_EN || "https://lively-union-8780-zoen.ryklcd0086.workers.dev"
+  process.env.WORKER_URL_EN || "https://holy-queen-edb9-koten.ryklcd0086.workers.dev"
 ).replace(/\/+$/, ""); // strip trailing slash
 const TOKEN_SECRET = "bbef4e4840ab0a33b6c129f0de8b1a6735471c82f43e9babc4adc64c5959a64a";
 
