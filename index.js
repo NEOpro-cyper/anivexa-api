@@ -42,7 +42,7 @@ const SIGNED_STREAM_WATCH_TTL = 60_000;
 // ── Worker proxy (?worker=1|true|<custom-url>) ───────────────────────────────
 // When enabled, stream + subtitle URLs in the response are prefixed with the
 // worker base, e.g. https://worker.example.dev/https://host/path/master.m3u8
-const DEFAULT_WORKER_BASE = (process.env.WORKER_PROXY_URL || "https://bold-hill-8d64.ntb7nmytsd.workers.dev").replace(/\/+$/, "");
+const DEFAULT_WORKER_BASE = (process.env.WORKER_PROXY_URL || "https://noisy-feather-adb6.ryklcd0086.workers.dev/mp").replace(/\/+$/, "");
 
 // ── Encrypted mode (?data=en) ─────────────────────────────────────────────
 // Stream/subtitle URLs are replaced with AES-256-GCM tokens that only the
