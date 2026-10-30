@@ -1,7 +1,7 @@
 const __name = (fn, _) => fn;
 import { getMedia } from '../core/anilist.js';
 import { extractFlixcloud } from "../extractors/index.js";
-import { buildTitles } from '../core/new-provider-utils.js';
+import { buildTitleSearchQueries, buildTitles } from '../core/new-provider-utils.js';
 import { get as cacheGet, set as cacheSet, isFresh as cacheIsFresh, SHOW_IDENTITY_TTL } from '../core/smartcache.js';
 
 var BASE = "https://reanime.to";
@@ -38,13 +38,13 @@ function extractAnilistIdFromCover(coverImage) {
 }
 __name(extractAnilistIdFromCover, "extractAnilistIdFromCover");
 async function resolveSeries(anilistId, ctx = {}) {
-  const cacheKey = `np:reanime:${anilistId}`;
+  const cacheKey = `np:match2:reanime:${anilistId}`;
   const cached = cacheGet(cacheKey);
   if (cacheIsFresh(cached)) return cached.data;
 
   const media = ctx.media ?? await getMedia(anilistId);
   const malId = media?.idMal ?? null;
-  const queries = buildTitles(media, ctx.anizip).slice(0, 5);
+  const queries = buildTitleSearchQueries(buildTitles(media, ctx.anizip), 16);
   const searchRequests = queries.map((query) => searchReanime(query));
   if (media?.genres?.includes("Hentai")) {
     searchRequests.push(...queries.map((query) => searchReanime(query, "Hentai")));
