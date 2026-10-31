@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { getMedia }                from "./core/anilist.js";
 import { mapAnimeIds }             from "./core/mapper.js";
 import mkissaHandler               from "./providers/mkissa.js";
@@ -36,6 +37,108 @@ function rewriteRequest(request, newPath) {
 const watchInflight = new Map();
 const SIGNED_STREAM_WATCH_TTL = 60_000;
 
+// ── Worker proxy (?worker=1|true|<custom-url>) ───────────────────────────────
+// When enabled, stream + subtitle URLs in the response are prefixed with the
+// worker base, e.g. https://worker.example.dev/https://host/path/master.m3u8
+const DEFAULT_WORKER_BASE = (process.env.WORKER_PROXY_URL || "https://bold-hill-8d64.ntb7nmytsd.workers.dev").replace(/\/+$/, "");
+
+// ── Encrypted mode (?data=en) ─────────────────────────────────────────────
+// Stream/subtitle URLs are replaced with AES-256-GCM tokens that only the
+// EN worker can decrypt — no upstream URL ever appears in the response.
+//   token = "v1." + b64url(iv) + "." + b64url(ciphertext + authtag)
+//   key   = SHA-256(SECRET)              -> AES-256-GCM
+//   iv    = SHA-256("iv:" + url)[0..12]  -> deterministic (same URL = same token)
+const WORKER_URL_EN = (
+  process.env.WORKER_URL_EN || "https://lively-union-8780-zoen.ryklcd0086.workers.dev"
+).replace(/\/+$/, ""); // strip trailing slash
+const TOKEN_SECRET = "bbef4e4840ab0a33b6c129f0de8b1a6735471c82f43e9babc4adc64c5959a64a";
+
+function b64url(buf) {
+  return Buffer.from(buf).toString("base64url");
+}
+
+function encryptUrlToken(rawUrl) {
+  const key = crypto.createHash("sha256").update(TOKEN_SECRET).digest();
+  const iv = crypto.createHash("sha256").update(`iv:${rawUrl}`).digest().subarray(0, 12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const ct = Buffer.concat([cipher.update(rawUrl, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `v1.${b64url(iv)}.${b64url(Buffer.concat([ct, tag]))}`;
+}
+
+function workerBase(request) {
+  const raw = new URL(request.url).searchParams.get("worker");
+  if (!raw) return null;
+  const value = raw.trim();
+  if (/^(1|true)$/i.test(value)) return DEFAULT_WORKER_BASE;
+  if (/^https?:\/\/.+/i.test(value)) return value.replace(/\/+$/, "");
+  return null;
+}
+
+function proxiedUrl(url, base, encrypt = false) {
+  if (typeof url !== "string" || !url) return url;
+  if (encrypt) {
+    // EN mode: tokenize absolute http(s) URLs only — relative paths cannot
+    // be decrypted by the worker, so they pass through untouched
+    if (!/^https?:\/\//i.test(url)) return url;
+    return `${WORKER_URL_EN}/${encryptUrlToken(url)}`;
+  }
+  if (!base) return url;
+  if (/^https?:\/\//i.test(url) || url.startsWith("//")) return `${base}/${url.replace(/^\/+/, "")}`;
+  return url;
+}
+
+function proxySubtitle(sub, base, encrypt = false) {
+  if (!sub || typeof sub !== "object") return sub;
+  return { ...sub, url: proxiedUrl(sub.url, base, encrypt) };
+}
+
+function proxyStream(stream, base, encrypt = false) {
+  if (!stream || typeof stream !== "object") return stream;
+  const next = { ...stream, url: proxiedUrl(stream.url, base, encrypt) };
+  if (Array.isArray(next.subtitles)) next.subtitles = next.subtitles.map((s) => proxySubtitle(s, base, encrypt));
+  return next;
+}
+
+function applyWorkerProxy(data, base, encrypt = false) {
+  if (!data || typeof data !== "object") return data;
+  const out = { ...data };
+  if (encrypt) out.encrypted = true;
+  if (Array.isArray(out.streams)) out.streams = out.streams.map((s) => proxyStream(s, base, encrypt));
+  // mkissa returns sources[] where extractedUrl is the playable stream
+  if (Array.isArray(out.sources)) out.sources = out.sources.map((s) =>
+    s && typeof s === "object" ? { ...s, extractedUrl: proxiedUrl(s.extractedUrl, base, encrypt) } : s
+  );
+  if (Array.isArray(out.subtitles)) out.subtitles = out.subtitles.map((s) => proxySubtitle(s, base, encrypt));
+  if (typeof out.stream_url === "string") out.stream_url = proxiedUrl(out.stream_url, base, encrypt);
+  return out;
+}
+
+async function withWorker(request, response) {
+  const base = workerBase(request);
+  const encrypt = (new URL(request.url).searchParams.get("data") || "").trim().toLowerCase() === "en";
+  if (!base && !encrypt) return response;
+
+  // 302-style redirect routes (e.g. /stream/reanime/...) → rewrite Location
+  if (response.status >= 300 && response.status < 400) {
+    const location = response.headers.get("location");
+    if (!location) return response;
+    const headers = new Headers(response.headers);
+    headers.set("Location", proxiedUrl(location, base, encrypt));
+    return new Response(null, { status: response.status, headers });
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) return response;
+
+  try {
+    const data = await response.json();
+    return json(applyWorkerProxy(data, base, encrypt), response.status);
+  } catch {
+    return response;
+  }
+}
+
 async function cachedWatch(cacheKey, handlerFn, ttl = WATCH_TTL) {
   const entry = await getAsync(cacheKey);
   if (entry && isFresh(entry)) return json(entry.data);
@@ -63,10 +166,9 @@ async function cachedWatch(cacheKey, handlerFn, ttl = WATCH_TTL) {
   finally { watchInflight.delete(cacheKey); }
 }
 
-export default {
-  async fetch(request, env) {
-    const url  = new URL(request.url);
-    const path = url.pathname;
+async function routeRequest(request, env) {
+  const url  = new URL(request.url);
+  const path = url.pathname;
 
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -287,6 +389,14 @@ export default {
         "/watch/animeonsen/:id/sub|dub/animeonsen-:ep",
         "/watch/anipm/:id/sub|dub/anipm-:ep",
       ],
+      worker: "Append ?worker=1|true (or ?worker=<custom-worker-url>) to any /watch or /stream route to route stream + subtitle URLs through the proxy worker",
+      encrypted: "Append ?data=en to any /watch or /stream route: stream + subtitle URLs come back as AES-256-GCM tokens that play through the EN decryptor worker (no upstream URL in the response)",
     });
+}
+
+export default {
+  async fetch(request, env) {
+    const response = await routeRequest(request, env);
+    return withWorker(request, response);
   },
 };
