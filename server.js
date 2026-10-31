@@ -7,6 +7,7 @@ import worker from "./index.js";
 
 const PORT  = Number(process.env.PORT) || 4000;
 const BASE  = process.env.BASE_PATH ?? "";
+const API_VERSION = "2.3";
 const __dir = dirname(fileURLToPath(import.meta.url));
 
 const STATIC = {
@@ -18,7 +19,7 @@ const STATIC = {
 
 function serveStatic(res, entry) {
   try {
-    const body = readFileSync(join(__dir, entry.file));
+    const body = readFileSync(join(__dir, entry.file), "utf8").replaceAll("{{API_VERSION}}", API_VERSION);
     res.writeHead(200, {
       "Content-Type":  entry.mime + "; charset=utf-8",
       "Cache-Control": "no-cache",
@@ -59,7 +60,7 @@ const server = http.createServer(async (req, res) => {
 
   try {
     const request  = await nodeToRequest(req);
-    const response = await worker.fetch(request, {});
+    const response = await worker.fetch(request, { API_VERSION });
 
     res.statusCode = response.status;
     for (const [k, v] of response.headers) res.setHeader(k, v);
