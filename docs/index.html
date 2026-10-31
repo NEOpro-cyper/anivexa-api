@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Anivexa API — Docs</title>
-  <meta name="description" content="Anivexa API documentation — a unified anime streaming aggregator API with 15 providers, exact-match identity resolution via AniList IDs."/>
+  <meta name="description" content="Anivexa API documentation — a unified anime streaming aggregator API with 12 providers, AniList ID mapping, and guarded fuzzy matching."/>
   <link rel="icon" type="image/svg+xml" href="logo.svg"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -36,7 +36,7 @@
     <div class="logo">
       <img src="logo.svg" alt="Anivexa"/>
       <span class="logo-text">Anivexa API</span>
-      <span class="logo-version">v2.2</span>
+      <span class="logo-version">v{{API_VERSION}}</span>
     </div>
     <div class="nav">
       <div class="nav-section">
@@ -58,16 +58,14 @@
         <a class="nav-item" href="#watch-reanime"><span class="method">GET</span>Reanime</a>
         <a class="nav-item" href="#watch-anikoto"><span class="method">GET</span>Anikoto</a>
         <a class="nav-item" href="#watch-animegg"><span class="method">GET</span>AnimeGG</a>
-        <a class="nav-item" href="#watch-anineko"><span class="method">GET</span>AniNeko</a>
-        <a class="nav-item" href="#watch-anidbapp"><span class="method">GET</span>AniDBApp</a>
         <a class="nav-item" href="#watch-animenosub"><span class="method">GET</span>AnimeNoSub</a>
         <a class="nav-item" href="#watch-anizone"><span class="method">GET</span>AniZone</a>
         <a class="nav-item" href="#watch-aniwaves"><span class="method">GET</span>AniWaves</a>
-        <a class="nav-item" href="#watch-anibd"><span class="method">GET</span>AniBD</a>
         <a class="nav-item" href="#watch-senshi"><span class="method">GET</span>Senshi</a>
         <a class="nav-item" href="#watch-kaa"><span class="method">GET</span>KickAssAnime</a>
         <a class="nav-item" href="#watch-animedunya"><span class="method">GET</span>AnimeDunya</a>
         <a class="nav-item" href="#watch-animeonsen"><span class="method">GET</span>AnimeOnsen</a>
+        <a class="nav-item" href="#watch-anipm"><span class="method">GET</span>Ani.pm</a>
       </div>
     </div>
   </nav>
@@ -79,7 +77,7 @@
     <section class="section section-hero" id="overview">
       <img src="logo.svg" alt="Anivexa" class="hero-logo"/>
       <h1>Anivexa API</h1>
-      <p>A unified anime streaming aggregator API. Resolve episode lists and stream sources across 14 providers using a single AniList ID — no scraping, no guessing, exact-match identity resolution.</p>
+      <p>A unified anime streaming aggregator API. Resolve episode lists and stream sources across 12 providers using a single AniList ID, with title and installment checks for fuzzy-search catalogs.</p>
       <div class="callout">
         <span class="callout-icon">💡</span>
         <span>All endpoints are read-only. No authentication required. All responses are JSON with CORS headers included.</span>
@@ -100,22 +98,20 @@
 
     <section class="section" id="providers-ref">
       <h2>Providers</h2>
-      <p>Fourteen providers are available. Each uses exact-match identity resolution via AniList or MAL IDs — no blind fuzzy matching.</p>
+      <p>Twelve providers are available. They resolve from AniList IDs; fuzzy-search catalogs validate titles and installment markers before selecting a match.</p>
       <div class="provider-grid">
         <div class="provider-card" style="--i:0"><div class="provider-name">mkissa</div><div class="provider-meta">MKissa</div></div>
         <div class="provider-card" style="--i:1"><div class="provider-name">reanime</div><div class="provider-meta">Reanime</div></div>
         <div class="provider-card" style="--i:2"><div class="provider-name">anikoto</div><div class="provider-meta">Anikoto</div></div>
         <div class="provider-card" style="--i:3"><div class="provider-name">animegg</div><div class="provider-meta">AnimeGG</div></div>
-        <div class="provider-card" style="--i:4"><div class="provider-name">anineko</div><div class="provider-meta">AniNeko</div></div>
-        <div class="provider-card" style="--i:5"><div class="provider-name">anidbapp</div><div class="provider-meta">AniDBApp</div></div>
         <div class="provider-card" style="--i:7"><div class="provider-name">animenosub</div><div class="provider-meta">AnimeNoSub</div></div>
         <div class="provider-card" style="--i:8"><div class="provider-name">anizone</div><div class="provider-meta">AniZone</div></div>
         <div class="provider-card" style="--i:9"><div class="provider-name">aniwaves</div><div class="provider-meta">AniWaves</div></div>
-        <div class="provider-card" style="--i:10"><div class="provider-name">anibd</div><div class="provider-meta">AniBD</div></div>
         <div class="provider-card" style="--i:11"><div class="provider-name">senshi</div><div class="provider-meta">Senshi</div></div>
         <div class="provider-card" style="--i:12"><div class="provider-name">kaa</div><div class="provider-meta">KickAssAnime</div></div>
         <div class="provider-card" style="--i:13"><div class="provider-name">animedunya</div><div class="provider-meta">AnimeDunya</div></div>
         <div class="provider-card" style="--i:14"><div class="provider-name">animeonsen</div><div class="provider-meta">AnimeOnsen</div></div>
+        <div class="provider-card" style="--i:15"><div class="provider-name">anipm</div><div class="provider-meta">Ani.pm</div></div>
       </div>
     </section>
 
@@ -134,7 +130,7 @@
         </div>
         <div class="code-label">Response</div>
         <pre><code><span class="p">{</span>
-  <span class="n">"name"</span><span class="p">:</span> <span class="s">"Anivexa API 2.2.1"</span><span class="p">,</span>
+  <span class="n">"name"</span><span class="p">:</span> <span class="s">"Anivexa API {{API_VERSION}}"</span><span class="p">,</span>
   <span class="n">"cache"</span><span class="p">:</span> <span class="b">false</span><span class="p">,</span>
   <span class="n">"providers"</span><span class="p">: [</span><span class="s">"mkissa"</span><span class="p">,</span> <span class="s">"reanime"</span><span class="p">,</span> <span class="s">"..."</span><span class="p">],</span>
   <span class="n">"routes"</span><span class="p">: [</span><span class="s">"/map/:anilistId"</span><span class="p">,</span> <span class="s">"..."</span><span class="p">]</span>
@@ -203,7 +199,6 @@
     <span class="p">}</span>
   <span class="p">},</span>
   <span class="n">"senshi"</span><span class="p">: {</span> <span class="s">"..."</span> <span class="p">},</span>
-  <span class="n">"anibd"</span><span class="p">:</span>  <span class="p">{</span> <span class="n">"error"</span><span class="p">:</span> <span class="s">"..."</span> <span class="p">}</span>
 <span class="p">}</span></code></pre>
       </div>
     </section>
@@ -230,7 +225,7 @@
         <div class="code-label">Examples</div>
         <pre><code><span class="k">GET</span> /episodes/reanime/16498
 <span class="k">GET</span> /episodes/reanime/senshi/16498
-<span class="k">GET</span> /episodes/reanime/senshi/anibd/16498<span class="p">?map=false</span></code></pre>
+<span class="k">GET</span> /episodes/reanime/senshi/16498<span class="p">?map=false</span></code></pre>
       </div>
     </section>
 
@@ -350,50 +345,6 @@
       </div>
     </section>
 
-    <section class="section" id="watch-anineko">
-      <h2>AniNeko</h2>
-      <div class="endpoint">
-        <div class="endpoint-head">
-          <span class="method-pill get">GET</span>
-          <span class="endpoint-path">/watch/anineko/<span class="param">:id</span>/<span class="param">sub|dub</span>/anineko-<span class="param">:ep</span></span>
-          <a class="try-btn" href="/watch/anineko/16498/sub/anineko-1" target="_blank">Try it ↗</a>
-        </div>
-        <div class="endpoint-body">
-          <p class="endpoint-desc">Returns stream sources from AniNeko for the specified episode.</p>
-          <table class="params-table">
-            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td class="param-name">:id</td><td class="param-type">integer</td><td class="param-desc">AniList media ID</td></tr>
-              <tr><td class="param-name">sub|dub</td><td class="param-type">string</td><td class="param-desc">Audio track preference</td></tr>
-              <tr><td class="param-name">:ep</td><td class="param-type">integer</td><td class="param-desc">Episode number</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="watch-anidbapp">
-      <h2>AniDBApp</h2>
-      <div class="endpoint">
-        <div class="endpoint-head">
-          <span class="method-pill get">GET</span>
-          <span class="endpoint-path">/watch/anidbapp/<span class="param">:id</span>/<span class="param">sub|dub</span>/anidbapp-<span class="param">:ep</span></span>
-          <a class="try-btn" href="/watch/anidbapp/16498/sub/anidbapp-1" target="_blank">Try it ↗</a>
-        </div>
-        <div class="endpoint-body">
-          <p class="endpoint-desc">Returns stream sources from AniDBApp. Uses exact AniList ID confirmation after fuzzy title search before resolving streams.</p>
-          <table class="params-table">
-            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td class="param-name">:id</td><td class="param-type">integer</td><td class="param-desc">AniList media ID</td></tr>
-              <tr><td class="param-name">sub|dub</td><td class="param-type">string</td><td class="param-desc">Audio track preference</td></tr>
-              <tr><td class="param-name">:ep</td><td class="param-type">integer</td><td class="param-desc">Episode number</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
     <section class="section" id="watch-animenosub">
       <h2>AnimeNoSub</h2>
       <div class="endpoint">
@@ -448,28 +399,6 @@
         </div>
         <div class="endpoint-body">
           <p class="endpoint-desc">Returns AniWaves stream sources for the specified episode, including direct HLS from Vidplay, MyCloud, and BYFMS, DATASV quality MP4 sources, and embed fallbacks.</p>
-          <table class="params-table">
-            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td class="param-name">:id</td><td class="param-type">integer</td><td class="param-desc">AniList media ID</td></tr>
-              <tr><td class="param-name">sub|dub</td><td class="param-type">string</td><td class="param-desc">Audio track preference</td></tr>
-              <tr><td class="param-name">:ep</td><td class="param-type">integer</td><td class="param-desc">Episode number</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="watch-anibd">
-      <h2>AniBD</h2>
-      <div class="endpoint">
-        <div class="endpoint-head">
-          <span class="method-pill get">GET</span>
-          <span class="endpoint-path">/watch/anibd/<span class="param">:id</span>/<span class="param">sub|dub</span>/anibd-<span class="param">:ep</span></span>
-          <a class="try-btn" href="/watch/anibd/16498/sub/anibd-1" target="_blank">Try it ↗</a>
-        </div>
-        <div class="endpoint-body">
-          <p class="endpoint-desc">Returns stream sources from AniBD. Resolves the player link, then extracts and returns the HLS URL directly.</p>
           <table class="params-table">
             <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
             <tbody>
@@ -633,6 +562,30 @@
       <span class="n">"headers"</span><span class="p">:</span> <span class="p">{</span> <span class="n">"Authorization"</span><span class="p">:</span> <span class="s">"Bearer &lt;session-token&gt;"</span> <span class="p">},</span>
       <span class="n">"subtitles"</span><span class="p">:</span> <span class="p">[</span> <span class="p">{</span> <span class="n">"url"</span><span class="p">:</span> <span class="s">"https://api.animeonsen.xyz/v4/subtitles/..."</span> <span class="p">}</span> <span class="p">]</span>
     <span class="p">}</span>
+  <span class="p">]</span>
+<span class="p">}</span></code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="watch-anipm">
+      <h2>Ani.pm</h2>
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method-pill get">GET</span>
+          <span class="endpoint-path">/watch/anipm/<span class="param">:id</span>/<span class="param">sub|dub</span>/anipm-<span class="param">:ep</span></span>
+          <a class="try-btn" href="/watch/anipm/178788/sub/anipm-1" target="_blank">Try it ↗</a>
+        </div>
+        <div class="endpoint-body">
+          <p class="endpoint-desc">Returns the regular soft-sub HLS source and, when available, a separate hard-sub source. Each stream is labeled with <code>subtitleType</code>.</p>
+        </div>
+        <div class="code-label">Response</div>
+        <pre><code><span class="p">{</span>
+  <span class="n">"anilistId"</span><span class="p">:</span> <span class="b">178788</span><span class="p">,</span>
+  <span class="n">"episode"</span><span class="p">:</span> <span class="b">1</span><span class="p">,</span>
+  <span class="n">"audio"</span><span class="p">:</span> <span class="s">"sub"</span><span class="p">,</span>
+  <span class="n">"streams"</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span> <span class="n">"url"</span><span class="p">:</span> <span class="s">"https://media.settlar.io/.../master.m3u8"</span><span class="p">,</span> <span class="n">"type"</span><span class="p">:</span> <span class="s">"hls"</span><span class="p">,</span> <span class="n">"server"</span><span class="p">:</span> <span class="s">"Ani.pm"</span><span class="p">,</span> <span class="n">"subtitleType"</span><span class="p">:</span> <span class="s">"softsub"</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="n">"url"</span><span class="p">:</span> <span class="s">"https://media.settlar.io/.../master.m3u8"</span><span class="p">,</span> <span class="n">"type"</span><span class="p">:</span> <span class="s">"hls"</span><span class="p">,</span> <span class="n">"server"</span><span class="p">:</span> <span class="s">"Ani.pm"</span><span class="p">,</span> <span class="n">"subtitleType"</span><span class="p">:</span> <span class="s">"hardsub"</span> <span class="p">}</span>
   <span class="p">]</span>
 <span class="p">}</span></code></pre>
       </div>
