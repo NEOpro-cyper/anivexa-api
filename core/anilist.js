@@ -92,8 +92,8 @@ async function getMedia(anilistId) {
       episodes: al.episodes ?? null,
       seasonYear: al.seasonYear ?? null,
       startDate: al.startDate ?? null,
-      nextAiringEpisode: al.nextAiringEpisode ?? null,
       genres: Array.isArray(al.genres) ? al.genres : [],
+      nextAiringEpisode: al.nextAiringEpisode ?? null,
       synonyms: Array.isArray(al.synonyms) ? al.synonyms : [],
     };
     resolved.set(id, media);
